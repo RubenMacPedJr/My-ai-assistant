@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My AI Assistant Studio</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-soft: rgba(99, 102, 241, 0.12);
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: #0b0f19;
+      color: #e2e8f0;
+    }
+    code, pre {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    }
+    .accent-bg { background-color: var(--accent); }
+    .accent-bg-hover:hover { background-color: var(--accent-hover); }
+    .accent-text { color: var(--accent); }
+    .accent-soft-bg { background-color: var(--accent-soft); }
+    .accent-border { border-color: var(--accent); }
+
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.22); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.4); }
+
+    @keyframes pulseDot {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    .typing-dot { animation: pulseDot 1.2s infinite ease-in-out; }
+    .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex bg-[#0b0f19] text-slate-100 antialiased">
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebarBackdrop" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 hidden md:hidden"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-40 w-72 bg-[#111827] border-r border-slate-800/80 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-out">
+    <!-- Brand / Assistant Identity -->
+    <div class="p-4 border-b border-slate-800/80 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-3 min-w-0">
+        <div id="sidebarAvatar" class="w-9 h-9 rounded-xl accent-bg flex items-center justify-center text-white shadow-lg shrink-0">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+        </div>
+        <div class="min-w-0">
+          <h1 id="sidebarName" class="font-semibold text-sm text-white truncate">Nova</h1>
+          <p id="sidebarTagline" class="text-xs text-slate-400 truncate">Personal AI Assistant</p>
+        </div>
+      </div>
+      <button id="closeSidebarBtn" class="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800" aria-label="Close sidebar">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- New Chat Button -->
+    <div class="p-3">
+      <button id="newChatBtn" class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl accent-bg accent-bg-hover text-white text-sm font-medium transition-colors shadow-sm">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>New Conversation</span>
+      </button>
+    </div>
+
+    <!-- Sidebar Tabs: Chats | Workspace (Tasks & Notes) -->
+    <div class="px-3 pb-2">
+      <div class="grid grid-cols-2 gap-1 p-1 bg-slate-900/90 rounded-lg border border-slate-800/80">
+        <button id="tabChatsBtn" class="px-2.5 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-white transition-colors">
+          Chats
+        </button>
+        <button id="tabWorkspaceBtn" class="px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1.5">
+          <span>Tasks & Notes</span>
+          <span id="workspaceBadge" class="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Chats List Panel -->
+    <div id="chatsPanel" class="flex-1 overflow-y-auto px-3 py-1 space-y-1"></div>
+
+    <!-- Workspace Panel (Tasks, Notes, Active Timer) -->
+    <div id="workspacePanel" class="hidden flex-1 overflow-y-auto px-3 py-2 space-y-4">
+      <!-- Active Timer Card -->
+      <div id="timerCard" class="hidden p-3 rounded-xl bg-slate-900/90 border border-slate-800">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="timer" class="w-3.5 h-3.5 accent-text"></i> Focus Timer
+          </span>
+          <button id="stopTimerBtn" class="text-xs text-rose-400 hover:text-rose-300">Stop</button>
+        </div>
+        <div id="timerDisplay" class="text-2xl font-mono font-semibold text-white">05:00</div>
+      </div>
+
+      <!-- Quick Tasks -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Tasks</span>
+          <span class="text-[11px] text-slate-500">Type /todo in chat</span>
+        </div>
+        <div class="flex gap-1.5 mb-2">
+          <input id="quickTaskInput" type="text" placeholder="Add a task..." class="flex-1 min-w-0 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+          <button id="addQuickTaskBtn" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200">Add</button>
+        </div>
+        <ul id="taskList" class="space-y-1.5"></ul>
+      </div>
+
+      <!-- Quick Notes -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Saved Notes</span>
+          <span class="text-[11px] text-slate-500">Type /note in chat</span>
+        </div>
+        <ul id="noteList" class="space-y-1.5"></ul>
+      </div>
+    </div>
+
+    <!-- Sidebar Footer: Mode & Settings -->
+    <div class="p-3 border-t border-slate-800/80 space-y-2">
+      <div class="flex items-center justify-between px-2.5 py-2 rounded-lg bg-slate-900/80 border border-slate-800/80">
+        <div class="flex items-center gap-2 min-w-0">
+          <span id="modeIndicatorDot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+          <span id="modeIndicatorText" class="text-xs text-slate-300 truncate">Local Smart Mode</span>
+        </div>
+        <button id="openApiSettingsLink" class="text-[11px] font-medium accent-text hover:underline shrink-0">Configure</button>
+      </div>
+      <button id="openSettingsBtn" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm text-slate-300 hover:text-white hover:bg-slate-800/80 transition-colors">
+        <span class="flex items-center gap-2.5">
+          <i data-lucide="sliders-horizontal" class="w-4 h-4 text-slate-400"></i>
+          <span>Customize Assistant</span>
+        </span>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-500"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Chat Area -->
+  <main class="flex-1 flex flex-col min-w-0 bg-[#0b0f19]">
+    <!-- Top Header -->
+    <header class="h-14 border-b border-slate-800/80 px-3 sm:px-5 flex items-center justify-between gap-2 bg-[#0b0f19]/90 backdrop-blur-md shrink-0">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <button id="openSidebarBtn" class="md:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800" aria-label="Open sidebar">
+          <i data-lucide="menu" class="w-5 h-5"></i>
+        </button>
+        <div class="flex items-center gap-2 min-w-0">
+          <span id="headerTitle" class="font-semibold text-sm sm:text-base text-white truncate">New Conversation</span>
+          <span id="personaBadge" class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium accent-soft-bg accent-text shrink-0">
+            General Assistant
+          </span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button id="exportChatBtn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors" title="Export conversation as Markdown">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Export</span>
+        </button>
+        <button id="clearChatBtn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-rose-300 hover:bg-slate-800 transition-colors" title="Clear current chat">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Clear</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Messages Container -->
+    <div id="chatScrollContainer" class="flex-1 overflow-y-auto px-3 sm:px-6 py-6">
+      <div id="chatFeed" class="max-w-3xl mx-auto space-y-6"></div>
+    </div>
+
+    <!-- Composer Area -->
+    <div class="border-t border-slate-800/80 bg-[#0b0f19] px-3 sm:px-6 py-3 sm:py-4 shrink-0">
+      <div class="max-w-3xl mx-auto">
+        <!-- Quick Slash Command Pills -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-2 no-scrollbar">
+          <span class="text-[11px] text-slate-500 shrink-0 mr-1">Commands:</span>
+          <button data-cmd="/todo " class="cmd-pill px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-700 text-[11px] text-slate-300 shrink-0 transition-colors">/todo</button>
+          <button data-cmd="/note " class="cmd-pill px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-700 text-[11px] text-slate-300 shrink-0 transition-colors">/note</button>
+          <button data-cmd="/timer 5m" class="cmd-pill px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-700 text-[11px] text-slate-300 shrink-0 transition-colors">/timer 5m</button>
+          <button data-cmd="/calc " class="cmd-pill px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-700 text-[11px] text-slate-300 shrink-0 transition-colors">/calc</button>
+          <button data-cmd="/help" class="cmd-pill px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 hover:border-slate-700 text-[11px] text-slate-300 shrink-0 transition-colors">/help</button>
+        </div>
+
+        <!-- Input Box -->
+        <form id="chatForm" class="relative flex items-end gap-2 bg-[#111827] border border-slate-700/80 focus-within:border-indigo-500 rounded-2xl p-2 shadow-lg transition-colors">
+          <textarea
+            id="promptInput"
+            rows="1"
+            placeholder="Message your AI assistant... (Enter to send, Shift+Enter for new line)"
+            class="flex-1 bg-transparent text-sm text-slate-100 placeholder-slate-500 resize-none focus:outline-none px-2 py-1.5 max-h-40 leading-relaxed"
+          ></textarea>
+          <button
+            id="sendBtn"
+            type="submit"
+            class="p-2.5 rounded-xl accent-bg accent-bg-hover text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+            aria-label="Send message"
+          >
+            <i data-lucide="arrow-up" class="w-4 h-4"></i>
+          </button>
+        </form>
+        <p class="text-[11px] text-slate-500 text-center mt-2">
+          Runs locally in your browser. Connect an API key in <button id="footerSettingsLink" class="text-slate-400 hover:text-white underline">Settings</button> for live cloud LLM responses.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings & Customization Modal -->
+  <div id="settingsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div class="w-full max-w-lg bg-[#111827] border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+        <h2 class="text-base font-semibold text-white">Customize Your AI Assistant</h2>
+        <button id="closeSettingsBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800" aria-label="Close settings">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Modal Tabs -->
+      <div class="px-5 pt-3 flex gap-4 border-b border-slate-800">
+        <button id="modalTabProfile" class="pb-2.5 text-xs font-semibold border-b-2 accent-border text-white">Identity & Persona</button>
+        <button id="modalTabApi" class="pb-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-400 hover:text-white">AI Engine & API Key</button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 flex-1">
+        <!-- Profile Tab -->
+        <div id="settingsProfilePane" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="settingName" class="block text-xs font-medium text-slate-300 mb-1">Assistant Name</label>
+              <input id="settingName" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label for="settingTagline" class="block text-xs font-medium text-slate-300 mb-1">Role / Tagline</label>
+              <input id="settingTagline" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1.5">Accent Theme</label>
+            <div class="flex items-center gap-2.5">
+              <button type="button" data-color="#6366f1" data-hover="#4f46e5" class="color-swatch w-7 h-7 rounded-full bg-indigo-500 ring-2 ring-offset-2 ring-offset-[#111827] ring-white" aria-label="Indigo"></button>
+              <button type="button" data-color="#10b981" data-hover="#059669" class="color-swatch w-7 h-7 rounded-full bg-emerald-500" aria-label="Emerald"></button>
+              <button type="button" data-color="#06b6d4" data-hover="#0891b2" class="color-swatch w-7 h-7 rounded-full bg-cyan-500" aria-label="Cyan"></button>
+              <button type="button" data-color="#f43f5e" data-hover="#e11d48" class="color-swatch w-7 h-7 rounded-full bg-rose-500" aria-label="Rose"></button>
+              <button type="button" data-color="#f59e0b" data-hover="#d97706" class="color-swatch w-7 h-7 rounded-full bg-amber-500" aria-label="Amber"></button>
+            </div>
+          </div>
+
+          <div>
+            <label for="settingPersona" class="block text-xs font-medium text-slate-300 mb-1">Persona Preset</label>
+            <select id="settingPersona" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+              <option value="General Assistant">General Assistant — Clear, balanced, helpful</option>
+              <option value="Coding Partner">Coding Partner — Concise code & debugging focus</option>
+              <option value="Writing Coach">Writing Coach — Crisp editing & structure</option>
+              <option value="Daily Planner">Daily Planner — Actionable schedules & priorities</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="settingSystemPrompt" class="block text-xs font-medium text-slate-300 mb-1">Custom System Instructions</label>
+            <textarea id="settingSystemPrompt" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="Describe how your assistant should think, speak, and format answers..."></textarea>
+          </div>
+        </div>
+
+        <!-- API Tab -->
+        <div id="settingsApiPane" class="hidden space-y-4">
+          <div class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 leading-relaxed">
+            Your assistant works out of the box in <strong>Local Smart Mode</strong> (calculators, timers, tasks, notes, and persona replies). To connect a real cloud model, select a provider and paste your API key below—it stays in your browser's local storage.
+          </div>
+
+          <div>
+            <label for="settingProvider" class="block text-xs font-medium text-slate-300 mb-1">AI Provider</label>
+            <select id="settingProvider" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+              <option value="local">Local Smart Mode (Built-in, No Key Required)</option>
+              <option value="gemini">Google Gemini API (BYOK)</option>
+              <option value="openai">OpenAI Compatible API (BYOK)</option>
+            </select>
+          </div>
+
+          <div id="apiKeyFields" class="hidden space-y-3">
+            <div>
+              <label for="settingApiKey" class="block text-xs font-medium text-slate-300 mb-1">API Key</label>
+              <div class="flex gap-2">
+                <input id="settingApiKey" type="password" placeholder="Paste your API key..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+                <button type="button" id="toggleKeyVisibilityBtn" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300">Show</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="settingModel" class="block text-xs font-medium text-slate-300 mb-1">Model</label>
+                <input id="settingModel" type="text" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label for="settingTemp" class="block text-xs font-medium text-slate-300 mb-1">Creativity (<span id="tempValue">0.7</span>)</label>
+                <input id="settingTemp" type="range" min="0" max="1" step="0.1" value="0.7" class="w-full mt-2 accent-indigo-500" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-slate-800 flex items-center justify-end gap-2 bg-slate-900/50">
+        <button id="cancelSettingsBtn" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800">Cancel</button>
+        <button id="saveSettingsBtn" class="px-4 py-2 rounded-xl text-xs font-medium accent-bg accent-bg-hover text-white">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-medium text-white shadow-xl opacity-0 pointer-events-none transition-opacity duration-200"></div>
+
+  <script>
+    // ---------- State & Safe Storage ----------
+    const STORAGE_KEY = 'my_ai_assistant_studio_v1';
+
+    const PERSONA_PROMPTS = {
+      'General Assistant': 'You are a helpful, clear, and thoughtful personal AI assistant.',
+      'Coding Partner': 'You are a pragmatic senior software engineer. Give concise, well-structured code and debugging advice.',
+      'Writing Coach': 'You are an editorial writing coach. Help tighten prose, clarify structure, and match tone.',
+      'Daily Planner': 'You are a calm productivity strategist. Break goals into realistic steps and priorities.'
+    };
+
+    const DEFAULT_STATE = {
+      settings: {
+        name: 'Nova',
+        tagline: 'Personal AI Assistant',
+        accent: '#6366f1',
+        accentHover: '#4f46e5',
+        persona: 'General Assistant',
+        systemPrompt: PERSONA_PROMPTS['General Assistant'],
+        provider: 'local',
+        apiKey: '',
+        model: 'gemini-2.5-flash',
+        temperature: 0.7
+      },
+      conversations: [],
+      activeConversationId: null,
+      tasks: [
+        { id: 't1', text: 'Customize my assistant name and persona', done: false },
+        { id: 't2', text: 'Try /timer 5m or /calc 18% of 84.50', done: false }
+      ],
+      notes: [
+        { id: 'n1', text: 'Use /note <text> anytime to save ideas here.', createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+      ]
+    };
+
+    let state = loadState();
+    let isGenerating = false;
+    let timerInterval = null;
+    let timerSecondsLeft = 0;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return createInitialState();
+        const parsed = JSON.parse(raw);
+        return {
+          ...DEFAULT_STATE,
+          ...parsed,
+          settings: { ...DEFAULT_STATE.settings, ...(parsed.settings || {}) }
+        };
+      } catch (e) {
+        return createInitialState();
+      }
+    }
+
+    function createInitialState() {
+      const id = 'conv_' + Date.now();
+      return {
+        ...JSON.parse(JSON.stringify(DEFAULT_STATE)),
+        conversations: [{ id, title: 'New Conversation', messages: [], updatedAt: Date.now() }],
+        activeConversationId: id
+      };
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        // Ignore storage errors in restricted contexts
+      }
+    }
+
+    function getActiveConversation() {
+      let conv = state.conversations.find(c => c.id === state.activeConversationId);
+      if (!conv) {
+        conv = state.conversations[0];
+        if (!conv) {
+          conv = { id: 'conv_' + Date.now(), title: 'New Conversation', messages: [], updatedAt: Date.now() };
+          state.conversations.unshift(conv);
+        }
+        state.activeConversationId = conv.id;
+      }
+      return conv;
+    }
+
+    // ---------- DOM References ----------
+    const sidebar = document.getElementById('sidebar');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const chatsPanel = document.getElementById('chatsPanel');
+    const workspacePanel = document.getElementById('workspacePanel');
+    const tabChatsBtn = document.getElementById('tabChatsBtn');
+    const tabWorkspaceBtn = document.getElementById('tabWorkspaceBtn');
+    const chatFeed = document.getElementById('chatFeed');
+    const chatScrollContainer = document.getElementById('chatScrollContainer');
+    const promptInput = document.getElementById('promptInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const toastEl = document.getElementById('toast');
+
+    // ---------- Toast & Clipboard ----------
+    let toastTimeout = null;
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.remove('opacity-0');
+      toastEl.classList.add('opacity-100');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toastEl.classList.remove('opacity-100');
+        toastEl.classList.add('opacity-0');
+      }, 2200);
+    }
+
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard')).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('Copied to clipboard');
+      } catch (e) {
+        showToast('Could not copy text');
+      }
+      document.body.removeChild(ta);
+    }
+
+    // ---------- Theme & Identity ----------
+    function applyTheme() {
+      const s = state.settings;
+      document.documentElement.style.setProperty('--accent', s.accent);
+      document.documentElement.style.setProperty('--accent-hover', s.accentHover);
+      document.documentElement.style.setProperty('--accent-soft', hexToRgba(s.accent, 0.14));
+      document.getElementById('sidebarName').textContent = s.name || 'Nova';
+      document.getElementById('sidebarTagline').textContent = s.tagline || 'Personal AI Assistant';
+      document.getElementById('personaBadge').textContent = s.persona || 'General Assistant';
+
+      const dot = document.getElementById('modeIndicatorDot');
+      const modeText = document.getElementById('modeIndicatorText');
+      if (s.provider === 'local' || !s.apiKey.trim()) {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400 shrink-0';
+        modeText.textContent = 'Local Smart Mode';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-sky-400 shrink-0';
+        modeText.textContent = s.provider === 'gemini' ? `Gemini (${s.model})` : `OpenAI (${s.model})`;
+      }
+    }
+
+    function hexToRgba(hex, alpha) {
+      const clean = hex.replace('#', '');
+      const r = parseInt(clean.substring(0, 2), 16) || 99;
+      const g = parseInt(clean.substring(2, 4), 16) || 102;
+      const b = parseInt(clean.substring(4, 6), 16) || 241;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    // ---------- Markdown-lite Renderer ----------
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function renderMarkdown(text) {
+      const codeBlocks = [];
+      let processed = text.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+        const idx = codeBlocks.length;
+        codeBlocks.push({ lang: lang || 'code', code: code.trimEnd() });
+        return `__CODE_BLOCK_${idx}__`;
+      });
+
+      processed = escapeHtml(processed);
+
+      // Inline code
+      processed = processed.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-slate-800 text-indigo-300 text-[12px]">$1</code>');
+      // Bold & Italic
+      processed = processed.replace(/\*\*([^*]+)\*\*/g, '<strong class="font-semibold text-white">$1</strong>');
+      processed = processed.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+      // Lines & Lists
+      const lines = processed.split('\n');
+      const htmlLines = [];
+      let inList = false;
+
+      for (const line of lines) {
+        const listMatch = line.match(/^\s*[-*]\s+(.*)$/);
+        if (listMatch) {
+          if (!inList) {
+            htmlLines.push('<ul class="list-disc pl-5 space-y-1 my-2">');
+            inList = true;
+          }
+          htmlLines.push(`<li>${listMatch[1]}</li>`);
+        } else {
+          if (inList) {
+            htmlLines.push('</ul>');
+            inList = false;
+          }
+          if (line.trim() === '') {
+            htmlLines.push('<div class="h-2"></div>');
+          } else {
+            htmlLines.push(`<p class="leading-relaxed">${line}</p>`);
+          }
+        }
+      }
+      if (inList) htmlLines.push('</ul>');
+
+      let finalHtml = htmlLines.join('');
+      finalHtml = finalHtml.replace(/__CODE_BLOCK_(\d+)__/g, (_, idx) => {
+        const block = codeBlocks[Number(idx)];
+        const encoded = encodeURIComponent(block.code);
+        return `
+          <div class="my-3 rounded-xl overflow-hidden border border-slate-800 bg-[#0d1322]">
+            <div class="flex items-center justify-between px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 text-[11px] text-slate-400">
+              <span>${escapeHtml(block.lang)}</span>
+              <button type="button" data-copy-code="${encoded}" class="copy-code-btn flex items-center gap-1 text-slate-300 hover:text-white">
+                <i data-lucide="copy" class="w-3 h-3"></i> Copy
+              </button>
+            </div>
+            <pre class="p-3 overflow-x-auto text-xs text-slate-200 leading-relaxed"><code>${escapeHtml(block.code)}</code></pre>
+          </div>
+        `;
+      });
+
+      return finalHtml;
+    }
+
+    // ---------- Rendering ----------
+    function renderAll() {
+      applyTheme();
+      renderSidebarChats();
+      renderWorkspace();
+      renderChatFeed();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderSidebarChats() {
+      chatsPanel.innerHTML = '';
+      state.conversations.forEach(conv => {
+        const isActive = conv.id === state.activeConversationId;
+        const row = document.createElement('div');
+        row.className = `group flex items-center justify-between gap-2 px-3 py-2 rounded-xl cursor-pointer text-sm transition-colors ${
+          isActive ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+        }`;
+
+        const titleBtn = document.createElement('button');
+        titleBtn.className = 'flex items-center gap-2 min-w-0 flex-1 text-left';
+        titleBtn.innerHTML = `<i data-lucide="message-square" class="w-3.5 h-3.5 shrink-0 ${isActive ? 'accent-text' : 'text-slate-500'}"></i><span class="truncate text-xs font-medium">${escapeHtml(conv.title)}</span>`;
+        titleBtn.addEventListener('click', () => {
+          state.activeConversationId = conv.id;
+          saveState();
+          renderAll();
+          closeMobileSidebar();
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-slate-700 text-slate-400 hover:text-rose-400 transition-opacity';
+        delBtn.setAttribute('aria-label', 'Delete conversation');
+        delBtn.innerHTML = '<i data-lucide="trash-2" class="w-3.5 h-3.5"></i>';
+        delBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteConversation(conv.id);
+        });
+
+        row.appendChild(titleBtn);
+        row.appendChild(delBtn);
+        chatsPanel.appendChild(row);
+      });
+    }
+
+    function renderWorkspace() {
+      const pendingCount = state.tasks.filter(t => !t.done).length;
+      document.getElementById('workspaceBadge').textContent = pendingCount + state.notes.length;
+
+      const taskList = document.getElementById('taskList');
+      taskList.innerHTML = '';
+      if (state.tasks.length === 0) {
+        taskList.innerHTML = '<li class="text-xs text-slate-500 italic">No tasks yet.</li>';
+      } else {
+        state.tasks.forEach(task => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-900/70 border border-slate-800/70 text-xs';
+          li.innerHTML = `
+            <label class="flex items-center gap-2 min-w-0 flex-1 cursor-pointer">
+              <input type="checkbox" ${task.done ? 'checked' : ''} class="rounded border-slate-700 bg-slate-800 text-indigo-500" />
+              <span class="truncate ${task.done ? 'line-through text-slate-500' : 'text-slate-200'}">${escapeHtml(task.text)}</span>
+            </label>
+            <button class="text-slate-500 hover:text-rose-400 p-0.5" aria-label="Delete task"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+          `;
+          li.querySelector('input').addEventListener('change', () => {
+            task.done = !task.done;
+            saveState();
+            renderWorkspace();
+            if (window.lucide) lucide.createIcons();
+          });
+          li.querySelector('button').addEventListener('click', () => {
+            state.tasks = state.tasks.filter(t => t.id !== task.id);
+            saveState();
+            renderWorkspace();
+            if (window.lucide) lucide.createIcons();
+          });
+          taskList.appendChild(li);
+        });
+      }
+
+      const noteList = document.getElementById('noteList');
+      noteList.innerHTML = '';
+      if (state.notes.length === 0) {
+        noteList.innerHTML = '<li class="text-xs text-slate-500 italic">No saved notes yet.</li>';
+      } else {
+        state.notes.forEach(note => {
+          const li = document.createElement('li');
+          li.className = 'p-2.5 rounded-lg bg-slate-900/70 border border-slate-800/70 text-xs space-y-1';
+          li.innerHTML = `
+            <div class="flex items-start justify-between gap-2">
+              <p class="text-slate-200 leading-relaxed break-words">${escapeHtml(note.text)}</p>
+              <button class="text-slate-500 hover:text-rose-400 shrink-0" aria-label="Delete note"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div class="text-[10px] text-slate-500">${escapeHtml(note.createdAt || '')}</div>
+          `;
+          li.querySelector('button').addEventListener('click', () => {
+            state.notes = state.notes.filter(n => n.id !== note.id);
+            saveState();
+            renderWorkspace();
+            if (window.lucide) lucide.createIcons();
+          });
+          noteList.appendChild(li);
+        });
+      }
+    }
+
+    function renderChatFeed() {
+      const conv = getActiveConversation();
+      document.getElementById('headerTitle').textContent = conv.title;
+      chatFeed.innerHTML = '';
+
+      if (conv.messages.length === 0) {
+        const s = state.settings;
+        const welcome = document.createElement('div');
+        welcome.className = 'py-8 sm:py-12 text-center space-y-6';
+        welcome.innerHTML = `
+          <div class="w-14 h-14 mx-auto rounded-2xl accent-bg flex items-center justify-center text-white shadow-xl">
+            <i data-lucide="sparkles" class="w-7 h-7"></i>
+          </div>
+          <div class="space-y-1.5">
+            <h2 class="text-xl sm:text-2xl font-semibold text-white">Hi, I'm ${escapeHtml(s.name)}</h2>
+            <p class="text-sm text-slate-400 max-w-md mx-auto">
+              Your customizable ${escapeHtml(s.persona.toLowerCase())}. Ask a question, run quick tools with slash commands, or connect your own API key in Settings.
+            </p>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-xl mx-auto text-left">
+            <button data-starter="Start a 5 minute focus timer and add Review project roadmap to my tasks" class="starter-card p-3.5 rounded-xl bg-[#111827] border border-slate-800 hover:border-slate-700 transition-colors">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center gap-1.5"><i data-lucide="timer" class="w-3.5 h-3.5 accent-text"></i> Focus & Tasks</div>
+              <div class="text-xs text-slate-400">Start a 5-minute timer and add a task</div>
+            </button>
+            <button data-starter="/calc 18% of 84.50 + 84.50" class="starter-card p-3.5 rounded-xl bg-[#111827] border border-slate-800 hover:border-slate-700 transition-colors">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center gap-1.5"><i data-lucide="calculator" class="w-3.5 h-3.5 accent-text"></i> Quick Math</div>
+              <div class="text-xs text-slate-400">Calculate 18% tip on $84.50</div>
+            </button>
+            <button data-starter="Give me a clean JavaScript debounce function example" class="starter-card p-3.5 rounded-xl bg-[#111827] border border-slate-800 hover:border-slate-700 transition-colors">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center gap-1.5"><i data-lucide="code-2" class="w-3.5 h-3.5 accent-text"></i> Code Snippet</div>
+              <div class="text-xs text-slate-400">Write a reusable JS debounce helper</div>
+            </button>
+            <button data-starter="What can you do? Show me your commands and tips." class="starter-card p-3.5 rounded-xl bg-[#111827] border border-slate-800 hover:border-slate-700 transition-colors">
+              <div class="text-xs font-semibold text-white mb-1 flex items-center gap-1.5"><i data-lucide="compass" class="w-3.5 h-3.5 accent-text"></i> Explore Capabilities</div>
+              <div class="text-xs text-slate-400">See slash commands & customization tips</div>
+            </button>
+          </div>
+        `;
+        welcome.querySelectorAll('.starter-card').forEach(btn => {
+          btn.addEventListener('click', () => {
+            sendMessage(btn.getAttribute('data-starter'));
+          });
+        });
+        chatFeed.appendChild(welcome);
+        return;
+      }
+
+      conv.messages.forEach(msg => {
+        const wrapper = document.createElement('div');
+        wrapper.className = `flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`;
+
+        if (msg.role === 'assistant') {
+          wrapper.innerHTML = `
+            <div class="w-8 h-8 rounded-xl accent-bg flex items-center justify-center text-white shrink-0 mt-0.5">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+            </div>
+            <div class="max-w-[85%] sm:max-w-[78%] space-y-1.5">
+              <div class="flex items-center gap-2 text-xs text-slate-400">
+                <span class="font-medium text-slate-200">${escapeHtml(state.settings.name)}</span>
+                <span>${escapeHtml(msg.time || '')}</span>
+              </div>
+              <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-[#111827] border border-slate-800/90 text-sm text-slate-200 space-y-1">
+                ${renderMarkdown(msg.content)}
+              </div>
+              <div class="flex items-center gap-2 pl-1">
+                <button class="copy-msg-btn text-[11px] text-slate-500 hover:text-slate-300 flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i> Copy
+                </button>
+              </div>
+            </div>
+          `;
+          wrapper.querySelector('.copy-msg-btn').addEventListener('click', () => copyText(msg.content));
+          wrapper.querySelectorAll('.copy-code-btn').forEach(btn => {
+            btn.addEventListener('click', () => copyText(decodeURIComponent(btn.getAttribute('data-copy-code'))));
+          });
+        } else {
+          wrapper.innerHTML = `
+            <div class="max-w-[85%] sm:max-w-[75%] space-y-1">
+              <div class="px-4 py-2.5 rounded-2xl rounded-tr-sm accent-bg text-white text-sm leading-relaxed shadow-sm">
+                ${escapeHtml(msg.content).replace(/\n/g, '<br>')}
+              </div>
+              <div class="text-[11px] text-slate-500 text-right pr-1">${escapeHtml(msg.time || '')}</div>
+            </div>
+          `;
+        }
+        chatFeed.appendChild(wrapper);
+      });
+
+      if (isGenerating) {
+        const typing = document.createElement('div');
+        typing.className = 'flex gap-3 justify-start';
+        typing.innerHTML = `
+          <div class="w-8 h-8 rounded-xl accent-bg flex items-center justify-center text-white shrink-0">
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+          </div>
+          <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-[#111827] border border-slate-800 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-slate-400 typing-dot"></span>
+            <span class="w-2 h-2 rounded-full bg-slate-400 typing-dot"></span>
+            <span class="w-2 h-2 rounded-full bg-slate-400 typing-dot"></span>
+          </div>
+        `;
+        chatFeed.appendChild(typing);
+      }
+
+      chatScrollContainer.scrollTop = chatScrollContainer.scrollHeight;
+    }
+
+    // ---------- Local Smart Engine & Tools ----------
+    function startTimer(minutes) {
+      clearInterval(timerInterval);
+      timerSecondsLeft = Math.max(1, Math.round(minutes * 60));
+      document.getElementById('timerCard').classList.remove('hidden');
+      updateTimerDisplay();
+      timerInterval = setInterval(() => {
+        timerSecondsLeft--;
+        updateTimerDisplay();
+        if (timerSecondsLeft <= 0) {
+          clearInterval(timerInterval);
+          showToast('Focus timer finished!');
+        }
+      }, 1000);
+      switchSidebarTab('workspace');
+    }
+
+    function updateTimerDisplay() {
+      const m = String(Math.floor(timerSecondsLeft / 60)).padStart(2, '0');
+      const s = String(timerSecondsLeft % 60).padStart(2, '0');
+      document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+    }
+
+    function safeEvalMath(expr) {
+      // Handle "X% of Y"
+      const pctMatch = expr.match(/(\d+(?:\.\d+)?)\s*%\s*of\s*(\d+(?:\.\d+)?)/i);
+      if (pctMatch) {
+        const pct = parseFloat(pctMatch[1]);
+        const base = parseFloat(pctMatch[2]);
+        const val = (pct / 100) * base;
+        return `${pct}% of ${base} = **${Number(val.toFixed(4))}** (Total with base: **${Number((base + val).toFixed(4))}**)`;
+      }
+      const sanitized = expr.replace(/[^0-9+\-*/().%\s]/g, '').trim();
+      if (!sanitized) return null;
+      // Convert standalone percentage like 18% to 0.18
+      const normalized = sanitized.replace(/(\d+(?:\.\d+)?)%/g, '($1/100)');
+      try {
+        const result = Function(`"use strict"; return (${normalized})`)();
+        if (typeof result === 'number' && Number.isFinite(result)) {
+          return `\`${expr.trim()}\` = **${Number(result.toFixed(6))}**`;
+        }
+      } catch (e) {
+        return null;
+      }
+      return null;
+    }
+
+    function handleLocalReply(prompt) {
+      const trimmed = prompt.trim();
+      const lower = trimmed.toLowerCase();
+
+      // Slash commands
+      if (lower.startsWith('/todo ')) {
+        const taskText = trimmed.slice(6).trim();
+        if (taskText) {
+          state.tasks.unshift({ id: 't_' + Date.now(), text: taskText, done: false });
+          saveState();
+          renderWorkspace();
+          return `Added task to your workspace: **${taskText}**\n\nOpen the **Tasks & Notes** tab in the sidebar anytime to check it off.`;
+        }
+      }
+
+      if (lower.startsWith('/note ')) {
+        const noteText = trimmed.slice(6).trim();
+        if (noteText) {
+          state.notes.unshift({
+            id: 'n_' + Date.now(),
+            text: noteText,
+            createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
+          saveState();
+          renderWorkspace();
+          return `Saved your note: **${noteText}**`;
+        }
+      }
+
+      if (lower.startsWith('/timer')) {
+        const numMatch = trimmed.match(/(\d+(?:\.\d+)?)/);
+        const mins = numMatch ? parseFloat(numMatch[1]) : 5;
+        startTimer(mins);
+        return `Started a **${mins}-minute** focus timer in your **Tasks & Notes** sidebar.`;
+      }
+
+      if (lower.startsWith('/calc ')) {
+        const expr = trimmed.slice(6);
+        const res = safeEvalMath(expr);
+        return res || `I couldn't parse \`${expr}\`. Try an expression like \`/calc (24 * 12) + 50\` or \`/calc 18% of 84.50\`.`;
+      }
+
+      if (lower === '/help' || lower.includes('what can you do')) {
+        return `Here is what I can help you with right now in **Local Smart Mode**:\n\n- **Tasks & Notes:** Use \`/todo <task>\` or \`/note <text>\` to save items to your sidebar.\n- **Focus Timer:** Type \`/timer 10m\` (or any minutes) to start a live countdown.\n- **Quick Math:** Type \`/calc 18% of 84.50\` or any arithmetic expression.\n- **Code & Writing:** Ask for code snippets, checklists, or summaries.\n- **Live Cloud AI:** Open **Customize Assistant -> AI Engine & API Key** to connect your own Gemini or OpenAI API key.`;
+      }
+
+      // Natural language timer + task
+      if (lower.includes('timer') && lower.includes('task')) {
+        const mins = (lower.match(/(\d+)\s*min/) || [])[1] || 5;
+        startTimer(Number(mins));
+        state.tasks.unshift({ id: 't_' + Date.now(), text: 'Review project roadmap', done: false });
+        saveState();
+        renderWorkspace();
+        return `Done! I've started a **${mins}-minute focus timer** and added **Review project roadmap** to your Tasks list in the sidebar.`;
+      }
+
+      // Natural language math
+      if (/^[\d\s+\-*/().%]+$/.test(trimmed) || /\d+\s*%\s*of\s*\d+/i.test(trimmed)) {
+        const res = safeEvalMath(trimmed);
+        if (res) return res;
+      }
+
+      // Code request demo
+      if (lower.includes('debounce')) {
+        return `Here is a clean, reusable **debounce** helper in JavaScript:\n\n\`\`\`javascript\nfunction debounce(fn, delay = 300) {\n  let timerId;\n  return (...args) => {\n    clearTimeout(timerId);\n    timerId = setTimeout(() => fn(...args), delay);\n  };\n}\n\`\`\`\n\nWrap any input or resize handler with \`debounce(myFn, 250)\` to avoid firing on every keystroke.`;
+      }
+
+      // Persona-flavored fallback
+      const s = state.settings;
+      return `Got it! I'm currently running in **Local Smart Mode** as **${s.name}** (${s.persona}).\n\nYour prompt: *"${trimmed}"*\n\n- Want me to save this as a task or note? Use \`/todo\` or \`/note\`.\n- Want full generative AI answers? Click **Configure** in the bottom-left sidebar and add your **Gemini** or **OpenAI** API key.`;
+    }
+
+    // ---------- Live Cloud API Calls (BYOK) ----------
+    async function callCloudModel(messages) {
+      const s = state.settings;
+      const key = s.apiKey.trim();
+
+      if (s.provider === 'gemini') {
+        const model = s.model.trim() || 'gemini-2.5-flash';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`;
+        const contents = messages.map(m => ({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        }));
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: s.systemPrompt || PERSONA_PROMPTS[s.persona] }] },
+            contents,
+            generationConfig: { temperature: Number(s.temperature) || 0.7 }
+          })
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Gemini API error (${res.status}): ${errText.slice(0, 180)}`);
+        }
+        const data = await res.json();
+        return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No response returned from Gemini.';
+      }
+
+      if (s.provider === 'openai') {
+        const model = s.model.trim() || 'gpt-4o-mini';
+        const apiMessages = [
+          { role: 'system', content: s.systemPrompt || PERSONA_PROMPTS[s.persona] },
+          ...messages.map(m => ({ role: m.role, content: m.content }))
+        ];
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`
+          },
+          body: JSON.stringify({
+            model,
+            messages: apiMessages,
+            temperature: Number(s.temperature) || 0.7
+          })
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`OpenAI API error (${res.status}): ${errText.slice(0, 180)}`);
+        }
+        const data = await res.json();
+        return data?.choices?.[0]?.message?.content || 'No response returned from OpenAI.';
+      }
+
+      return handleLocalReply(messages[messages.length - 1].content);
+    }
+
+    // ---------- Messaging Flow ----------
+    async function sendMessage(text) {
+      const content = text.trim();
+      if (!content || isGenerating) return;
+
+      const conv = getActiveConversation();
+      const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      if (conv.messages.length === 0) {
+        conv.title = content.length > 34 ? content.slice(0, 34) + '...' : content;
+      }
+
+      conv.messages.push({ role: 'user', content, time: nowTime });
+      conv.updatedAt = Date.now();
+      promptInput.value = '';
+      promptInput.style.height = 'auto';
+      isGenerating = true;
+      sendBtn.disabled = true;
+      saveState();
+      renderAll();
+
+      let replyText = '';
+      const useCloud = state.settings.provider !== 'local' && state.settings.apiKey.trim().length > 0 && !content.startsWith('/');
+
+      try {
+        if (useCloud) {
+          replyText = await callCloudModel(conv.messages);
+        } else {
+          await new Promise(r => setTimeout(r, 320));
+          replyText = handleLocalReply(content);
+        }
+      } catch (err) {
+        replyText = `**Connection Issue:** ${err.message}\n\nFalling back to local check: verify your API key and model name in **Customize Assistant -> AI Engine & API Key**.`;
+      }
+
+      conv.messages.push({
+        role: 'assistant',
+        content: replyText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+      conv.updatedAt = Date.now();
+      isGenerating = false;
+      sendBtn.disabled = false;
+      saveState();
+      renderAll();
+    }
+
+    function deleteConversation(id) {
+      state.conversations = state.conversations.filter(c => c.id !== id);
+      if (state.conversations.length === 0) {
+        const fresh = { id: 'conv_' + Date.now(), title: 'New Conversation', messages: [], updatedAt: Date.now() };
+        state.conversations.push(fresh);
+        state.activeConversationId = fresh.id;
+      } else if (state.activeConversationId === id) {
+        state.activeConversationId = state.conversations[0].id;
+      }
+      saveState();
+      renderAll();
+    }
+
+    // ---------- UI Event Wiring ----------
+    function switchSidebarTab(tab) {
+      if (tab === 'chats') {
+        chatsPanel.classList.remove('hidden');
+        workspacePanel.classList.add('hidden');
+        tabChatsBtn.className = 'px-2.5 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-white transition-colors';
+        tabWorkspaceBtn.className = 'px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1.5';
+      } else {
+        chatsPanel.classList.add('hidden');
+        workspacePanel.classList.remove('hidden');
+        tabWorkspaceBtn.className = 'px-2.5 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-white transition-colors flex items-center justify-center gap-1.5';
+        tabChatsBtn.className = 'px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-400 hover:text-white transition-colors';
+      }
+    }
+
+    function openMobileSidebar() {
+      sidebar.classList.remove('-translate-x-full');
+      sidebarBackdrop.classList.remove('hidden');
+    }
+    function closeMobileSidebar() {
+      sidebar.classList.add('-translate-x-full');
+      sidebarBackdrop.classList.add('hidden');
+    }
+
+    function openSettings(tab = 'profile') {
+      const s = state.settings;
+      document.getElementById('settingName').value = s.name;
+      document.getElementById('settingTagline').value = s.tagline;
+      document.getElementById('settingPersona').value = s.persona;
+      document.getElementById('settingSystemPrompt').value = s.systemPrompt;
+      document.getElementById('settingProvider').value = s.provider;
+      document.getElementById('settingApiKey').value = s.apiKey;
+      document.getElementById('settingModel').value = s.model;
+      document.getElementById('settingTemp').value = s.temperature;
+      document.getElementById('tempValue').textContent = s.temperature;
+
+      toggleApiFields();
+      switchModalTab(tab);
+
+      document.querySelectorAll('.color-swatch').forEach(sw => {
+        const active = sw.getAttribute('data-color').toLowerCase() === s.accent.toLowerCase();
+        sw.classList.toggle('ring-2', active);
+        sw.classList.toggle('ring-offset-2', active);
+        sw.classList.toggle('ring-offset-[#111827]', active);
+        sw.classList.toggle('ring-white', active);
+      });
+
+      settingsModal.classList.remove('hidden');
+      settingsModal.classList.add('flex');
+    }
+
+    function closeSettings() {
+      settingsModal.classList.add('hidden');
+      settingsModal.classList.remove('flex');
+    }
+
+    function switchModalTab(tab) {
+      const isProfile = tab === 'profile';
+      document.getElementById('settingsProfilePane').classList.toggle('hidden', !isProfile);
+      document.getElementById('settingsApiPane').classList.toggle('hidden', isProfile);
+      document.getElementById('modalTabProfile').className = `pb-2.5 text-xs font-semibold border-b-2 ${isProfile ? 'accent-border text-white' : 'border-transparent text-slate-400 hover:text-white'}`;
+      document.getElementById('modalTabApi').className = `pb-2.5 text-xs font-semibold border-b-2 ${!isProfile ? 'accent-border text-white' : 'border-transparent text-slate-400 hover:text-white'}`;
+    }
+
+    function toggleApiFields() {
+      const provider = document.getElementById('settingProvider').value;
+      const fields = document.getElementById('apiKeyFields');
+      fields.classList.toggle('hidden', provider === 'local');
+      if (provider === 'gemini' && !document.getElementById('settingModel').value) {
+        document.getElementById('settingModel').value = 'gemini-2.5-flash';
+      } else if (provider === 'openai' && (!document.getElementById('settingModel').value || document.getElementById('settingModel').value.startsWith('gemini'))) {
+        document.getElementById('settingModel').value = 'gpt-4o-mini';
+      }
+    }
+
+    // Event Listeners
+    document.getElementById('openSidebarBtn').addEventListener('click', openMobileSidebar);
+    document.getElementById('closeSidebarBtn').addEventListener('click', closeMobileSidebar);
+    sidebarBackdrop.addEventListener('click', closeMobileSidebar);
+
+    tabChatsBtn.addEventListener('click', () => switchSidebarTab('chats'));
+    tabWorkspaceBtn.addEventListener('click', () => switchSidebarTab('workspace'));
+
+    document.getElementById('newChatBtn').addEventListener('click', () => {
+      const fresh = { id: 'conv_' + Date.now(), title: 'New Conversation', messages: [], updatedAt: Date.now() };
+      state.conversations.unshift(fresh);
+      state.activeConversationId = fresh.id;
+      saveState();
+      renderAll();
+      closeMobileSidebar();
+      promptInput.focus();
+    });
+
+    document.getElementById('clearChatBtn').addEventListener('click', () => {
+      const conv = getActiveConversation();
+      conv.messages = [];
+      conv.title = 'New Conversation';
+      saveState();
+      renderAll();
+      showToast('Conversation cleared');
+    });
+
+    document.getElementById('exportChatBtn').addEventListener('click', () => {
+      const conv = getActiveConversation();
+      if (conv.messages.length === 0) {
+        showToast('Nothing to export yet');
+        return;
+      }
+      const md = `# ${conv.title}\n\n` + conv.messages.map(m =>
+        `### ${m.role === 'user' ? 'You' : state.settings.name} (${m.time || ''})\n${m.content}`
+      ).join('\n\n');
+      const blob = new Blob([md], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${conv.title.replace(/[^a-z0-9]+/gi, '_').toLowerCase()}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Exported as Markdown');
+    });
+
+    document.getElementById('addQuickTaskBtn').addEventListener('click', () => {
+      const inp = document.getElementById('quickTaskInput');
+      const val = inp.value.trim();
+      if (!val) return;
+      state.tasks.unshift({ id: 't_' + Date.now(), text: val, done: false });
+      inp.value = '';
+      saveState();
+      renderWorkspace();
+      if (window.lucide) lucide.createIcons();
+    });
+
+    document.getElementById('quickTaskInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('addQuickTaskBtn').click();
+      }
+    });
+
+    document.getElementById('stopTimerBtn').addEventListener('click', () => {
+      clearInterval(timerInterval);
+      document.getElementById('timerCard').classList.add('hidden');
+      showToast('Timer stopped');
+    });
+
+    document.querySelectorAll('.cmd-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const cmd = pill.getAttribute('data-cmd');
+        if (cmd === '/help' || cmd === '/timer 5m') {
+          sendMessage(cmd);
+        } else {
+          promptInput.value = cmd;
+          promptInput.focus();
+        }
+      });
+    });
+
+    promptInput.addEventListener('input', () => {
+      promptInput.style.height = 'auto';
+      promptInput.style.height = Math.min(promptInput.scrollHeight, 160) + 'px';
+    });
+
+    promptInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(promptInput.value);
+      }
+    });
+
+    document.getElementById('chatForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      sendMessage(promptInput.value);
+    });
+
+    // Settings Modal Wiring
+    document.getElementById('openSettingsBtn').addEventListener('click', () => openSettings('profile'));
+    document.getElementById('openApiSettingsLink').addEventListener('click', () => openSettings('api'));
+    document.getElementById('footerSettingsLink').addEventListener('click', () => openSettings('api'));
+    document.getElementById('closeSettingsBtn').addEventListener('click', closeSettings);
+    document.getElementById('cancelSettingsBtn').addEventListener('click', closeSettings);
+    document.getElementById('modalTabProfile').addEventListener('click', () => switchModalTab('profile'));
+    document.getElementById('modalTabApi').addEventListener('click', () => switchModalTab('api'));
+    document.getElementById('settingProvider').addEventListener('change', toggleApiFields);
+
+    document.getElementById('settingPersona').addEventListener('change', (e) => {
+      const preset = PERSONA_PROMPTS[e.target.value];
+      if (preset) document.getElementById('settingSystemPrompt').value = preset;
+    });
+
+    document.getElementById('settingTemp').addEventListener('input', (e) => {
+      document.getElementById('tempValue').textContent = e.target.value;
+    });
+
+    document.getElementById('toggleKeyVisibilityBtn').addEventListener('click', (e) => {
+      const inp = document.getElementById('settingApiKey');
+      const isPwd = inp.type === 'password';
+      inp.type = isPwd ? 'text' : 'password';
+      e.target.textContent = isPwd ? 'Hide' : 'Show';
+    });
+
+    let selectedAccent = state.settings.accent;
+    let selectedAccentHover = state.settings.accentHover;
+    document.querySelectorAll('.color-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        selectedAccent = sw.getAttribute('data-color');
+        selectedAccentHover = sw.getAttribute('data-hover');
+        document.querySelectorAll('.color-swatch').forEach(other => {
+          const active = other === sw;
+          other.classList.toggle('ring-2', active);
+          other.classList.toggle('ring-offset-2', active);
+          other.classList.toggle('ring-offset-[#111827]', active);
+          other.classList.toggle('ring-white', active);
+        });
+      });
+    });
+
+    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+      state.settings = {
+        name: document.getElementById('settingName').value.trim() || 'Nova',
+        tagline: document.getElementById('settingTagline').value.trim() || 'Personal AI Assistant',
+        accent: selectedAccent,
+        accentHover: selectedAccentHover,
+        persona: document.getElementById('settingPersona').value,
+        systemPrompt: document.getElementById('settingSystemPrompt').value.trim() || PERSONA_PROMPTS['General Assistant'],
+        provider: document.getElementById('settingProvider').value,
+        apiKey: document.getElementById('settingApiKey').value.trim(),
+        model: document.getElementById('settingModel').value.trim() || 'gemini-2.5-flash',
+        temperature: parseFloat(document.getElementById('settingTemp').value) || 0.7
+      };
+      saveState();
+      renderAll();
+      closeSettings();
+      showToast('Assistant settings saved');
+    });
+
+    // Init
+    window.addEventListener('DOMContentLoaded', () => {
+      renderAll();
+    });
+  </script>
+</body>
+</html>
